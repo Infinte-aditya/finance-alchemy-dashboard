@@ -6,7 +6,7 @@ import Button from '@/components/shared/Button';
 import Card from '@/components/shared/Card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { CurrencyRupee } from 'lucide-react';
+import { IndianRupee } from 'lucide-react';
 
 const SignUp = () => {
   const { signup } = useAuth();
@@ -35,7 +35,7 @@ const SignUp = () => {
         <div className="mb-8 text-center">
           <h1 className="text-3xl font-bold text-gray-900 dark:text-white">Create an account</h1>
           <p className="mt-2 text-gray-600 dark:text-gray-400">
-            Sign up to get started with Finance Alchemy <CurrencyRupee className="inline h-4 w-4" />
+            Sign up to get started with Finance Alchemy <IndianRupee className="inline h-4 w-4" />
           </p>
         </div>
         
@@ -86,7 +86,7 @@ const SignUp = () => {
           </div>
           
           <Button type="submit" className="w-full" isLoading={loading}>
-            Create Account <CurrencyRupee className="ml-2 h-4 w-4" />
+            Create Account <IndianRupee className="ml-2 h-4 w-4" />
           </Button>
         </form>
         

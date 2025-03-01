@@ -1,6 +1,6 @@
 
 import React from 'react';
-import { CurrencyRupee, TrendingUp, AlertTriangle, LineChart } from 'lucide-react';
+import { IndianRupee, TrendingUp, AlertTriangle, LineChart } from 'lucide-react';
 import Card from '@/components/shared/Card';
 
 const Insights = () => {
@@ -64,7 +64,7 @@ const Insights = () => {
               <div className="mb-1 flex items-center justify-between">
                 <span className="text-sm font-medium">Food Delivery</span>
                 <span className="flex items-center text-sm font-medium">
-                  <CurrencyRupee className="h-3 w-3" /> 8,540
+                  <IndianRupee className="h-3 w-3" /> 8,540
                 </span>
               </div>
               <div className="h-2 w-full rounded-full bg-gray-200 dark:bg-gray-700">
@@ -78,7 +78,7 @@ const Insights = () => {
               <div className="mb-1 flex items-center justify-between">
                 <span className="text-sm font-medium">Subscriptions</span>
                 <span className="flex items-center text-sm font-medium">
-                  <CurrencyRupee className="h-3 w-3" /> 2,390
+                  <IndianRupee className="h-3 w-3" /> 2,390
                 </span>
               </div>
               <div className="h-2 w-full rounded-full bg-gray-200 dark:bg-gray-700">
@@ -92,7 +92,7 @@ const Insights = () => {
               <div className="mb-1 flex items-center justify-between">
                 <span className="text-sm font-medium">Utility Bills</span>
                 <span className="flex items-center text-sm font-medium">
-                  <CurrencyRupee className="h-3 w-3" /> 3,870
+                  <IndianRupee className="h-3 w-3" /> 3,870
                 </span>
               </div>
               <div className="h-2 w-full rounded-full bg-gray-200 dark:bg-gray-700">
@@ -124,21 +124,21 @@ const Insights = () => {
             <tbody className="divide-y divide-gray-200 dark:divide-gray-700">
               <tr>
                 <td className="py-3 text-left">ELSS Mutual Funds</td>
-                <td className="py-3 text-right"><CurrencyRupee className="inline h-3 w-3" /> 1,50,000</td>
+                <td className="py-3 text-right"><IndianRupee className="inline h-3 w-3" /> 1,50,000</td>
                 <td className="py-3 text-right">80C</td>
-                <td className="py-3 text-right"><CurrencyRupee className="inline h-3 w-3" /> 46,800</td>
+                <td className="py-3 text-right"><IndianRupee className="inline h-3 w-3" /> 46,800</td>
               </tr>
               <tr>
                 <td className="py-3 text-left">NPS Tier 1</td>
-                <td className="py-3 text-right"><CurrencyRupee className="inline h-3 w-3" /> 50,000</td>
+                <td className="py-3 text-right"><IndianRupee className="inline h-3 w-3" /> 50,000</td>
                 <td className="py-3 text-right">80CCD(1B)</td>
-                <td className="py-3 text-right"><CurrencyRupee className="inline h-3 w-3" /> 15,600</td>
+                <td className="py-3 text-right"><IndianRupee className="inline h-3 w-3" /> 15,600</td>
               </tr>
               <tr>
                 <td className="py-3 text-left">Health Insurance Premium</td>
-                <td className="py-3 text-right"><CurrencyRupee className="inline h-3 w-3" /> 25,000</td>
+                <td className="py-3 text-right"><IndianRupee className="inline h-3 w-3" /> 25,000</td>
                 <td className="py-3 text-right">80D</td>
-                <td className="py-3 text-right"><CurrencyRupee className="inline h-3 w-3" /> 7,800</td>
+                <td className="py-3 text-right"><IndianRupee className="inline h-3 w-3" /> 7,800</td>
               </tr>
             </tbody>
           </table>

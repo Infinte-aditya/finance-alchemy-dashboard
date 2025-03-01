@@ -1,6 +1,6 @@
 
 import React from 'react';
-import { CurrencyRupee, TrendingUp, TrendingDown } from 'lucide-react';
+import { IndianRupee, TrendingUp, TrendingDown } from 'lucide-react';
 import Card from '@/components/shared/Card';
 
 const Investments = () => {
@@ -43,7 +43,7 @@ const Investments = () => {
               <span className="text-gray-600 dark:text-gray-400">Reliance</span>
               <div className="text-right">
                 <div className="flex items-center justify-end font-medium">
-                  <CurrencyRupee className="h-3 w-3" /> 2,850.75
+                  <IndianRupee className="h-3 w-3" /> 2,850.75
                 </div>
                 <span className="text-xs text-finance-positive">+2.1%</span>
               </div>
@@ -52,7 +52,7 @@ const Investments = () => {
               <span className="text-gray-600 dark:text-gray-400">HDFC Bank</span>
               <div className="text-right">
                 <div className="flex items-center justify-end font-medium">
-                  <CurrencyRupee className="h-3 w-3" /> 1,675.30
+                  <IndianRupee className="h-3 w-3" /> 1,675.30
                 </div>
                 <span className="text-xs text-finance-negative">-0.5%</span>
               </div>
@@ -61,7 +61,7 @@ const Investments = () => {
               <span className="text-gray-600 dark:text-gray-400">TCS</span>
               <div className="text-right">
                 <div className="flex items-center justify-end font-medium">
-                  <CurrencyRupee className="h-3 w-3" /> 3,940.20
+                  <IndianRupee className="h-3 w-3" /> 3,940.20
                 </div>
                 <span className="text-xs text-finance-positive">+1.3%</span>
               </div>
@@ -86,19 +86,19 @@ const Investments = () => {
               <tbody className="divide-y divide-gray-200 dark:divide-gray-700">
                 <tr>
                   <td className="py-3 text-left">Nippon India ETF Nifty BeES</td>
-                  <td className="py-3 text-right"><CurrencyRupee className="inline h-3 w-3" /> 224.30</td>
+                  <td className="py-3 text-right"><IndianRupee className="inline h-3 w-3" /> 224.30</td>
                   <td className="py-3 text-right text-finance-positive">+1.2%</td>
                   <td className="py-3 text-right">5,240</td>
                 </tr>
                 <tr>
                   <td className="py-3 text-left">SBI ETF Sensex</td>
-                  <td className="py-3 text-right"><CurrencyRupee className="inline h-3 w-3" /> 738.40</td>
+                  <td className="py-3 text-right"><IndianRupee className="inline h-3 w-3" /> 738.40</td>
                   <td className="py-3 text-right text-finance-positive">+0.9%</td>
                   <td className="py-3 text-right">3,860</td>
                 </tr>
                 <tr>
                   <td className="py-3 text-left">HDFC Nifty 50 ETF</td>
-                  <td className="py-3 text-right"><CurrencyRupee className="inline h-3 w-3" /> 224.10</td>
+                  <td className="py-3 text-right"><IndianRupee className="inline h-3 w-3" /> 224.10</td>
                   <td className="py-3 text-right text-finance-positive">+1.1%</td>
                   <td className="py-3 text-right">2,980</td>
                 </tr>
