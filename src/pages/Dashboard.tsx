@@ -1,11 +1,19 @@
-
 import React from 'react';
 import Card from '@/components/shared/Card';
 import MarketCard from '@/components/shared/MarketCard';
 import InsightCard from '@/components/shared/InsightCard';
 import TransactionForm from '@/components/forms/TransactionForm';
 import { useAuth } from '@/hooks/useAuth';
-import { LineChart, BarChart } from 'recharts';
+import { 
+  Line, 
+  LineChart, 
+  BarChart, 
+  XAxis, 
+  YAxis, 
+  Tooltip, 
+  Area, 
+  AreaChart 
+} from 'recharts';
 import { 
   AreaChart as AreaChartIcon,
   ArrowUpRight, 
@@ -19,7 +27,6 @@ import {
 } from 'lucide-react';
 import Button from '@/components/shared/Button';
 
-// Sample data for charts
 const spendingData = [
   { name: 'Jan', amount: 4000 },
   { name: 'Feb', amount: 3000 },
@@ -71,7 +78,6 @@ const Dashboard = () => {
         </Button>
       </div>
       
-      {/* Key Metrics */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
         {[
           { 
@@ -132,9 +138,7 @@ const Dashboard = () => {
         ))}
       </div>
       
-      {/* Middle Section: Charts and Transactions */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Charts */}
         <div className="lg:col-span-2 space-y-6">
           <Card className="w-full">
             <div className="flex justify-between items-center mb-6">
@@ -217,7 +221,6 @@ const Dashboard = () => {
           </div>
         </div>
         
-        {/* Transaction Form */}
         <div className="lg:col-span-1">
           <Card>
             <div className="flex items-center mb-4">
@@ -229,7 +232,6 @@ const Dashboard = () => {
         </div>
       </div>
       
-      {/* Insights */}
       <div>
         <div className="flex justify-between items-center mb-4">
           <h2 className="text-xl font-semibold">AI Insights</h2>
