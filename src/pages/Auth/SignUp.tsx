@@ -6,7 +6,7 @@ import Button from '@/components/shared/Button';
 import Card from '@/components/shared/Card';
 
 const SignUp = () => {
-  const { signUp } = useAuth();
+  const { signup } = useAuth();
   const [name, setName] = React.useState('');
   const [email, setEmail] = React.useState('');
   const [password, setPassword] = React.useState('');
@@ -17,7 +17,7 @@ const SignUp = () => {
     setLoading(true);
     
     try {
-      await signUp(name, email, password);
+      await signup(name, email, password);
       // Successful signup is handled by the useAuth hook, which redirects to dashboard
     } catch (error) {
       console.error('Signup failed:', error);
