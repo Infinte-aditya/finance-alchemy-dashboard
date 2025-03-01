@@ -11,7 +11,8 @@ import {
   LineChart, 
   PieChart,
   TrendingUp,
-  Zap
+  Zap,
+  IndianRupee
 } from 'lucide-react';
 import Card from '@/components/shared/Card';
 
@@ -91,15 +92,15 @@ const Home = () => {
                       <div className="space-y-2">
                         <div className="flex justify-between">
                           <span className="text-gray-600 dark:text-gray-400">Income</span>
-                          <span className="font-medium">$5,240</span>
+                          <span className="font-medium flex items-center"><IndianRupee className="h-4 w-4 mr-1" />5,240</span>
                         </div>
                         <div className="flex justify-between">
                           <span className="text-gray-600 dark:text-gray-400">Expenses</span>
-                          <span className="font-medium">$3,180</span>
+                          <span className="font-medium flex items-center"><IndianRupee className="h-4 w-4 mr-1" />3,180</span>
                         </div>
                         <div className="flex justify-between">
                           <span className="text-gray-600 dark:text-gray-400">Savings</span>
-                          <span className="font-medium text-finance-green">$2,060</span>
+                          <span className="font-medium text-finance-green flex items-center"><IndianRupee className="h-4 w-4 mr-1" />2,060</span>
                         </div>
                       </div>
                     </div>
@@ -109,7 +110,7 @@ const Home = () => {
                         <h3 className="font-medium">AI Insights</h3>
                         <Zap className="h-5 w-5 text-amber-500" />
                       </div>
-                      <p className="text-sm text-gray-600 dark:text-gray-400">You could save $320/month by reducing dining expenses.</p>
+                      <p className="text-sm text-gray-600 dark:text-gray-400">You could save <span className="flex items-center inline-flex"><IndianRupee className="h-3 w-3" />320</span>/month by reducing dining expenses.</p>
                     </div>
                   </div>
                   
@@ -122,7 +123,7 @@ const Home = () => {
                       <div className="space-y-2">
                         <div className="flex justify-between">
                           <span className="text-gray-600 dark:text-gray-400">Portfolio Value</span>
-                          <span className="font-medium">$28,450</span>
+                          <span className="font-medium flex items-center"><IndianRupee className="h-4 w-4 mr-1" />28,450</span>
                         </div>
                         <div className="flex justify-between">
                           <span className="text-gray-600 dark:text-gray-400">Return</span>
