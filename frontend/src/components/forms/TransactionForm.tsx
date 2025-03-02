@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -29,17 +28,10 @@ import { cn } from '@/lib/utils';
 import Button from '@/components/shared/Button';
 
 const formSchema = z.object({
-  amount: z.coerce.number()
-    .positive({ message: 'Amount must be a positive number' }),
-  date: z.date({
-    required_error: 'Please select a date',
-  }),
-  description: z.string()
-    .min(3, { message: 'Description must be at least 3 characters' })
-    .max(200, { message: 'Description cannot exceed 200 characters' }),
-  category: z.string({
-    required_error: 'Please select a category',
-  }),
+  amount: z.coerce.number().positive({ message: 'Amount must be a positive number' }),
+  date: z.date({ required_error: 'Please select a date' }),
+  description: z.string().min(3, { message: 'Description must be at least 3 characters' }).max(200, { message: 'Description cannot exceed 200 characters' }),
+  category: z.string({ required_error: 'Please select a category' }),
 });
 
 type FormValues = z.infer<typeof formSchema>;
@@ -49,22 +41,13 @@ interface TransactionFormProps {
 }
 
 const CATEGORIES = [
-  'Housing',
-  'Transportation',
-  'Food',
-  'Utilities',
-  'Insurance',
-  'Healthcare',
-  'Saving & Debt',
-  'Personal Spending',
-  'Recreation',
-  'Miscellaneous'
+  'Housing', 'Transportation', 'Food', 'Utilities', 'Insurance', 'Healthcare', 'Saving & Debt', 'Personal Spending', 'Recreation', 'Miscellaneous'
 ];
 
 const TransactionForm: React.FC<TransactionFormProps> = ({ onSuccess }) => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [suggestedCategory, setSuggestedCategory] = useState<string | null>(null);
-  
+
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
     defaultValues: {
@@ -77,29 +60,18 @@ const TransactionForm: React.FC<TransactionFormProps> = ({ onSuccess }) => {
 
   const watchDescription = form.watch('description');
 
-  // Simulated AI categorization based on description
   React.useEffect(() => {
     if (watchDescription.length > 5) {
-      // This would be replaced with an actual AI suggestion API call
       const suggestCategory = () => {
         const lowerDesc = watchDescription.toLowerCase();
-        
-        if (lowerDesc.includes('rent') || lowerDesc.includes('mortgage')) 
-          return 'Housing';
-        if (lowerDesc.includes('gas') || lowerDesc.includes('uber') || lowerDesc.includes('car')) 
-          return 'Transportation';
-        if (lowerDesc.includes('grocery') || lowerDesc.includes('restaurant') || lowerDesc.includes('coffee')) 
-          return 'Food';
-        if (lowerDesc.includes('electric') || lowerDesc.includes('water') || lowerDesc.includes('phone')) 
-          return 'Utilities';
-        if (lowerDesc.includes('movie') || lowerDesc.includes('concert') || lowerDesc.includes('game')) 
-          return 'Recreation';
-        if (lowerDesc.includes('doctor') || lowerDesc.includes('medicine') || lowerDesc.includes('hospital')) 
-          return 'Healthcare';
-        
+        if (lowerDesc.includes('rent') || lowerDesc.includes('mortgage')) return 'Housing';
+        if (lowerDesc.includes('gas') || lowerDesc.includes('uber') || lowerDesc.includes('car')) return 'Transportation';
+        if (lowerDesc.includes('grocery') || lowerDesc.includes('restaurant') || lowerDesc.includes('coffee')) return 'Food';
+        if (lowerDesc.includes('electric') || lowerDesc.includes('water') || lowerDesc.includes('phone')) return 'Utilities';
+        if (lowerDesc.includes('movie') || lowerDesc.includes('concert') || lowerDesc.includes('game')) return 'Recreation';
+        if (lowerDesc.includes('doctor') || lowerDesc.includes('medicine') || lowerDesc.includes('hospital')) return 'Healthcare';
         return null;
       };
-      
       const suggested = suggestCategory();
       if (suggested && suggested !== form.getValues('category')) {
         setSuggestedCategory(suggested);
@@ -111,36 +83,42 @@ const TransactionForm: React.FC<TransactionFormProps> = ({ onSuccess }) => {
 
   const onSubmit = async (values: FormValues) => {
     setIsSubmitting(true);
-    
+    console.log('Form submitted with values:', values); // Debug
     try {
-      // In a real app, this would be an API call
-      console.log('Submitting transaction:', values);
-      
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 1500));
-      
+      const token = localStorage.getItem('finance_auth_token');
+      console.log('Token:', token); // Debug
+      const response = await fetch('http://localhost:3001/transactions', {
+        method: 'POST',
+        headers: { 
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
+        },
+        body: JSON.stringify(values),
+      });
+      const data = await response.json();
+      console.log('Response:', response.status, data); // Debug
+      if (!response.ok) {
+        throw new Error(data.error || 'Failed to add transaction');
+      }
       toast.success('Transaction added successfully');
-      
-      // Reset form
       form.reset({
         amount: undefined,
         date: new Date(),
         description: '',
         category: '',
       });
-      
-      // Call success callback if provided
       if (onSuccess) {
+        console.log('Calling onSuccess'); // Debug
         onSuccess();
       }
-    } catch (error) {
-      console.error('Error adding transaction:', error);
-      toast.error('Failed to add transaction. Please try again.');
+    } catch (error: any) {
+      console.error('Error adding transaction:', error.message);
+      toast.error(error.message || 'Failed to add transaction. Please try again.');
     } finally {
       setIsSubmitting(false);
     }
   };
-  
+
   const applySuggestion = () => {
     if (suggestedCategory) {
       form.setValue('category', suggestedCategory);
@@ -167,7 +145,7 @@ const TransactionForm: React.FC<TransactionFormProps> = ({ onSuccess }) => {
                       type="number" 
                       step="0.01"
                       min="0"
-                      className="pl-8"
+                      className="pl-8 text-gray-900 dark:text-gray-200 dark:bg-gray-700"
                     />
                   </div>
                 </FormControl>
@@ -175,7 +153,6 @@ const TransactionForm: React.FC<TransactionFormProps> = ({ onSuccess }) => {
               </FormItem>
             )}
           />
-          
           <FormField
             control={form.control}
             name="date"
@@ -187,16 +164,9 @@ const TransactionForm: React.FC<TransactionFormProps> = ({ onSuccess }) => {
                     <FormControl>
                       <Button
                         variant="outline"
-                        className={cn(
-                          "w-full pl-3 text-left font-normal",
-                          !field.value && "text-muted-foreground"
-                        )}
+                        className={cn("w-full pl-3 text-left font-normal", !field.value && "text-muted-foreground")}
                       >
-                        {field.value ? (
-                          format(field.value, "PPP")
-                        ) : (
-                          <span>Pick a date</span>
-                        )}
+                        {field.value ? format(field.value, "PPP") : <span>Pick a date</span>}
                         <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
                       </Button>
                     </FormControl>
@@ -206,9 +176,7 @@ const TransactionForm: React.FC<TransactionFormProps> = ({ onSuccess }) => {
                       mode="single"
                       selected={field.value}
                       onSelect={field.onChange}
-                      disabled={(date) =>
-                        date > new Date() || date < new Date("1900-01-01")
-                      }
+                      disabled={(date) => date > new Date() || date < new Date("1900-01-01")}
                       initialFocus
                     />
                   </PopoverContent>
@@ -229,14 +197,12 @@ const TransactionForm: React.FC<TransactionFormProps> = ({ onSuccess }) => {
                 <Textarea 
                   placeholder="What was this transaction for?" 
                   {...field}
-                  className="resize-none"
+                  className="resize-none text-gray-900 dark:text-gray-200 dark:bg-gray-700"
                 />
               </FormControl>
               <div className="flex justify-between">
                 <FormMessage />
-                <p className="text-xs text-gray-500">
-                  {field.value.length}/200
-                </p>
+                <p className="text-xs text-gray-500">{field.value.length}/200</p>
               </div>
             </FormItem>
           )}
@@ -252,7 +218,7 @@ const TransactionForm: React.FC<TransactionFormProps> = ({ onSuccess }) => {
                 <div className="relative">
                   <FormControl>
                     <Select onValueChange={field.onChange} value={field.value}>
-                      <SelectTrigger>
+                      <SelectTrigger className="text-gray-900 dark:text-gray-200 dark:bg-gray-700">
                         <SelectValue placeholder="Select a category" />
                       </SelectTrigger>
                       <SelectContent>
