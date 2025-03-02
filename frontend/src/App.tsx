@@ -8,7 +8,6 @@ import DashboardLayout from "./components/layout/DashboardLayout";
 import PageTransition from "./components/layout/PageTransition";
 import { GoogleOAuthProvider } from '@react-oauth/google';
 
-// Pages
 import Home from "./pages/Home";
 import Dashboard from "./pages/Dashboard";
 import Investments from "./pages/Investments";
@@ -23,12 +22,12 @@ const queryClient = new QueryClient();
 
 const App = () => (
   <QueryClientProvider client={queryClient}>
-    <BrowserRouter>  {/* Moved up */}
-      <AuthProvider>  {/* Now inside Router */}
+    <BrowserRouter>
+      <AuthProvider>
         <TooltipProvider>
           <Toaster />
           <Sonner position="top-right" />
-          <GoogleOAuthProvider clientId="389856686953-nidvmp096v2iup8ogahu96a0i2os47lb.apps.googleusercontent.com">
+          <GoogleOAuthProvider clientId={import.meta.env.VITE_GOOGLE_CLIENT_ID || 'MISSING_GOOGLE_CLIENT_ID'}>
             <Routes>
               <Route path="/" element={<PageTransition><Home /></PageTransition>} />
               <Route path="/login" element={<PageTransition><Login /></PageTransition>} />

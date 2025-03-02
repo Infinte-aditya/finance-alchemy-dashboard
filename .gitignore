@@ -1,5 +1,5 @@
 # Ignore environment files
-.env*
+.env
 .vite-env.d.ts
 
 # Ignore dependencies

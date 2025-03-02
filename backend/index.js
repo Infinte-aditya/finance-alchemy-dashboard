@@ -23,15 +23,34 @@ app.use((req, res, next) => {
   next();
 });
 
+// Check environment variables
+const MONGO_URI = process.env.MONGO_URI;
+if (!MONGO_URI) {
+  console.error('Error: MONGO_URI is not set in .env file');
+  process.exit(1);
+}
+
+const GOOGLE_CLIENT_ID = process.env.GOOGLE_CLIENT_ID;
+if (!GOOGLE_CLIENT_ID) {
+  console.error('Error: GOOGLE_CLIENT_ID is not set in .env file');
+  process.exit(1);
+}
+
+const JWT_SECRET = process.env.JWT_SECRET;
+if (!JWT_SECRET) {
+  console.error('Error: JWT_SECRET is not set in .env file');
+  process.exit(1);
+}
+
+// const PORT = process.env.PORT || 3001;
+
 // MongoDB Atlas connection
 mongoose.connect(process.env.MONGO_URI)
   .then(() => console.log('Connected to MongoDB Atlas'))
   .catch(err => console.error('MongoDB Atlas connection error:', err));
 
 // Google OAuth setup
-const GOOGLE_CLIENT_ID = process.env.GOOGLE_CLIENT_ID;
 const client = new OAuth2Client(GOOGLE_CLIENT_ID);
-const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key';
 
 // JWT Middleware
 const verifyToken = (req, res, next) => {
