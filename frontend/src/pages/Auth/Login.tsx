@@ -18,19 +18,25 @@ const Login = () => {
     try {
       await login(email, password);
     } catch (error) {
-      // Error handled in useAuth
+      console.error('Login error:', error.message);
     } finally {
       setLoading(false);
     }
   };
 
-  const handleGoogleSuccess = async (credentialResponse: { credential?: string }) => {
+  function handleGoogleLogin(response) {
+    console.log("Google ID Token:", response.credential);
+    // Send this token to your backend
+  }
+
+  const handleGoogleSuccess = async (credentialResponse) => {
+    console.log('Google credential response:', credentialResponse);
     if (credentialResponse.credential) {
       setLoading(true);
       try {
         await googleLogin(credentialResponse.credential);
       } catch (error) {
-        // Error handled in useAuth
+        console.error('Google login error:', error);
       } finally {
         setLoading(false);
       }
@@ -39,6 +45,7 @@ const Login = () => {
 
   const handleGoogleError = () => {
     toast.error('Google Sign-In failed');
+    console.error('Google Sign-In failed at client-side');
   };
 
   return (
@@ -121,7 +128,6 @@ const Login = () => {
               onError={handleGoogleError}
               shape="pill"
               theme="outline"
-              
             />
           </div>
         </div>

@@ -7,6 +7,7 @@ const userSchema = new mongoose.Schema({
   password: { type: String }, // Optional for Google users
   avatar: { type: String }, // Optional
   createdAt: { type: Date, default: Date.now },
+  authMethod: { type: String, default: 'local' }, // Add this if missing
 });
 
 // Hash password before saving (only for email/password users)

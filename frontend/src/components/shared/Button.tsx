@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { Button as ShadcnButton } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
@@ -13,7 +12,7 @@ interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
   children?: React.ReactNode;
 }
 
-const Button = ({ 
+const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(({
   variant = 'default', 
   size = 'default',
   isLoading = false,
@@ -21,11 +20,12 @@ const Button = ({
   className,
   children,
   ...props 
-}: ButtonProps) => {
+}, ref) => {
   const variantClass = variant === 'success' ? 'bg-finance-green hover:bg-finance-green/90 text-white' : '';
   
   return (
     <ShadcnButton
+      ref={ref}
       variant={variant === 'success' ? 'default' : variant}
       size={size}
       className={cn(variantClass, className)}
@@ -41,6 +41,8 @@ const Button = ({
       {!isLoading && children}
     </ShadcnButton>
   );
-};
+});
+
+Button.displayName = 'Button';
 
 export default Button;

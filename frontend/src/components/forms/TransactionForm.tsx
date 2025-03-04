@@ -1,3 +1,4 @@
+// frontend/src/components/forms/TransactionForm.tsx
 import React, { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -41,12 +42,12 @@ interface TransactionFormProps {
 }
 
 const CATEGORIES = [
-  'Housing', 'Transportation', 'Food', 'Utilities', 'Insurance', 'Healthcare', 'Saving & Debt', 'Personal Spending', 'Recreation', 'Miscellaneous'
+  'Housing', 'Transportation', 'Food', 'Utilities', 'Insurance', 
+  'Healthcare', 'Saving & Debt', 'Personal Spending', 'Recreation', 'Miscellaneous'
 ];
 
 const TransactionForm: React.FC<TransactionFormProps> = ({ onSuccess }) => {
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [suggestedCategory, setSuggestedCategory] = useState<string | null>(null);
 
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
@@ -58,35 +59,13 @@ const TransactionForm: React.FC<TransactionFormProps> = ({ onSuccess }) => {
     },
   });
 
-  const watchDescription = form.watch('description');
-
-  React.useEffect(() => {
-    if (watchDescription.length > 5) {
-      const suggestCategory = () => {
-        const lowerDesc = watchDescription.toLowerCase();
-        if (lowerDesc.includes('rent') || lowerDesc.includes('mortgage')) return 'Housing';
-        if (lowerDesc.includes('gas') || lowerDesc.includes('uber') || lowerDesc.includes('car')) return 'Transportation';
-        if (lowerDesc.includes('grocery') || lowerDesc.includes('restaurant') || lowerDesc.includes('coffee')) return 'Food';
-        if (lowerDesc.includes('electric') || lowerDesc.includes('water') || lowerDesc.includes('phone')) return 'Utilities';
-        if (lowerDesc.includes('movie') || lowerDesc.includes('concert') || lowerDesc.includes('game')) return 'Recreation';
-        if (lowerDesc.includes('doctor') || lowerDesc.includes('medicine') || lowerDesc.includes('hospital')) return 'Healthcare';
-        return null;
-      };
-      const suggested = suggestCategory();
-      if (suggested && suggested !== form.getValues('category')) {
-        setSuggestedCategory(suggested);
-      }
-    } else {
-      setSuggestedCategory(null);
-    }
-  }, [watchDescription, form]);
-
   const onSubmit = async (values: FormValues) => {
     setIsSubmitting(true);
-    console.log('Form submitted with values:', values); // Debug
     try {
       const token = localStorage.getItem('finance_auth_token');
-      console.log('Token:', token); // Debug
+      if (!token) {
+        throw new Error('No authentication token found');
+      }
       const response = await fetch('http://localhost:3001/transactions', {
         method: 'POST',
         headers: { 
@@ -95,11 +74,10 @@ const TransactionForm: React.FC<TransactionFormProps> = ({ onSuccess }) => {
         },
         body: JSON.stringify(values),
       });
+
       const data = await response.json();
-      console.log('Response:', response.status, data); // Debug
-      if (!response.ok) {
-        throw new Error(data.error || 'Failed to add transaction');
-      }
+      if (!response.ok) throw new Error(data.error || 'Failed to add transaction');
+
       toast.success('Transaction added successfully');
       form.reset({
         amount: undefined,
@@ -107,22 +85,12 @@ const TransactionForm: React.FC<TransactionFormProps> = ({ onSuccess }) => {
         description: '',
         category: '',
       });
-      if (onSuccess) {
-        console.log('Calling onSuccess'); // Debug
-        onSuccess();
-      }
-    } catch (error: any) {
-      console.error('Error adding transaction:', error.message);
-      toast.error(error.message || 'Failed to add transaction. Please try again.');
+      onSuccess?.();
+    } catch (error) {
+      console.error('Error adding transaction:', error);
+      toast.error(error instanceof Error ? error.message : 'Failed to add transaction');
     } finally {
       setIsSubmitting(false);
-    }
-  };
-
-  const applySuggestion = () => {
-    if (suggestedCategory) {
-      form.setValue('category', suggestedCategory);
-      setSuggestedCategory(null);
     }
   };
 
@@ -138,7 +106,7 @@ const TransactionForm: React.FC<TransactionFormProps> = ({ onSuccess }) => {
                 <FormLabel>Amount</FormLabel>
                 <FormControl>
                   <div className="relative">
-                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500">$</span>
+                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500">₹</span>
                     <Input 
                       placeholder="0.00" 
                       {...field} 
@@ -164,7 +132,9 @@ const TransactionForm: React.FC<TransactionFormProps> = ({ onSuccess }) => {
                     <FormControl>
                       <Button
                         variant="outline"
-                        className={cn("w-full pl-3 text-left font-normal", !field.value && "text-muted-foreground")}
+                        className={cn("w-full pl-3 text-left font-normal", 
+                          !field.value && "text-muted-foreground")}
+                        disabled={isSubmitting}
                       >
                         {field.value ? format(field.value, "PPP") : <span>Pick a date</span>}
                         <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
@@ -186,7 +156,7 @@ const TransactionForm: React.FC<TransactionFormProps> = ({ onSuccess }) => {
             )}
           />
         </div>
-        
+
         <FormField
           control={form.control}
           name="description"
@@ -198,6 +168,7 @@ const TransactionForm: React.FC<TransactionFormProps> = ({ onSuccess }) => {
                   placeholder="What was this transaction for?" 
                   {...field}
                   className="resize-none text-gray-900 dark:text-gray-200 dark:bg-gray-700"
+                  disabled={isSubmitting}
                 />
               </FormControl>
               <div className="flex justify-between">
@@ -207,54 +178,42 @@ const TransactionForm: React.FC<TransactionFormProps> = ({ onSuccess }) => {
             </FormItem>
           )}
         />
-        
-        <div className="relative">
-          <FormField
-            control={form.control}
-            name="category"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Category</FormLabel>
-                <div className="relative">
-                  <FormControl>
-                    <Select onValueChange={field.onChange} value={field.value}>
-                      <SelectTrigger className="text-gray-900 dark:text-gray-200 dark:bg-gray-700">
-                        <SelectValue placeholder="Select a category" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {CATEGORIES.map((category) => (
-                          <SelectItem key={category} value={category}>
-                            {category}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </FormControl>
-                  {suggestedCategory && !field.value && (
-                    <div className="absolute right-0 top-0 mt-11 bg-finance-light-green text-finance-green text-sm p-2 rounded-md animate-fade-in">
-                      <span>Suggestion: {suggestedCategory}</span>
-                      <Button 
-                        variant="link" 
-                        size="sm"
-                        onClick={applySuggestion} 
-                        className="text-finance-green underline p-0 ml-2 h-auto"
-                      >
-                        Apply
-                      </Button>
-                    </div>
-                  )}
-                </div>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-        </div>
-        
+
+        <FormField
+          control={form.control}
+          name="category"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Category</FormLabel>
+              <FormControl>
+                <Select 
+                  onValueChange={field.onChange} 
+                  value={field.value}
+                  disabled={isSubmitting}
+                >
+                  <SelectTrigger className="text-gray-900 dark:text-gray-200 dark:bg-gray-700">
+                    <SelectValue placeholder="Select a category" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {CATEGORIES.map((category) => (
+                      <SelectItem key={category} value={category}>
+                        {category}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+
         <Button 
           type="submit" 
           className="w-full" 
           isLoading={isSubmitting}
           loadingText="Adding Transaction..."
+          disabled={isSubmitting}
         >
           Add Transaction
         </Button>

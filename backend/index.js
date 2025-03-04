@@ -42,7 +42,17 @@ if (!JWT_SECRET) {
   process.exit(1);
 }
 
-// const PORT = process.env.PORT || 3001;
+const FINNHUB_API_KEY = process.env.FINNHUB_API_KEY;
+if (!FINNHUB_API_KEY) {
+  console.error('Error: FINNHUB_API_KEY is not set in .env file');
+  process.exit(1);
+}
+
+const BINANCE_API_KEY = process.env.BINANCE_API_KEY;
+if (!BINANCE_API_KEY) {
+  console.error('Error: BINANCE_API_KEY is not set in .env file');
+  process.exit(1);
+}
 
 // MongoDB Atlas connection
 mongoose.connect(process.env.MONGO_URI)
@@ -54,13 +64,13 @@ const client = new OAuth2Client(GOOGLE_CLIENT_ID);
 
 // JWT Middleware
 const verifyToken = (req, res, next) => {
-  const token = req.headers['authorization']?.split(' ')[1]; // Expecting "Bearer <token>"
+  const token = req.headers['authorization']?.split(' ')[1];
   if (!token) {
     return res.status(401).json({ error: 'No token provided' });
   }
   try {
     const decoded = jwt.verify(token, JWT_SECRET);
-    req.user = decoded; // Attach user info (id, email) to request
+    req.user = decoded;
     next();
   } catch (error) {
     console.error('JWT verification failed:', error.message);
@@ -77,23 +87,89 @@ app.get('/', (req, res) => {
 app.get('/api/market-data', verifyToken, async (req, res) => {
   try {
     const symbols = ['BTC-USD', 'ETH-USD'];
-    const data = await Promise.all(symbols.map(async (symbol) => {
-      const quote = await yahooFinance.quoteSummary(symbol);
-      return {
-        name: quote.price.longName || symbol.split('-')[0],
-        symbol: quote.price.symbol,
-        price: quote.price.regularMarketPrice,
-        change: quote.price.regularMarketChangePercent * 100,
-        marketCap: quote.summaryDetail.marketCap
-          ? formatMarketCap(quote.summaryDetail.marketCap)
-          : 'N/A'
-      };
-    }));
+    const data = await Promise.all(
+      symbols.map(async (symbol) => {
+        const quote = await yahooFinance.quoteSummary(symbol);
+        return {
+          name: quote.price.longName || symbol.split('-')[0],
+          symbol: quote.price.symbol,
+          price: quote.price.regularMarketPrice,
+          change: quote.price.regularMarketChangePercent * 100,
+          marketCap: quote.summaryDetail.marketCap
+            ? formatMarketCap(quote.summaryDetail.marketCap)
+            : 'N/A',
+        };
+      })
+    );
     console.log('Fetched default market data:', data);
     res.json(data);
   } catch (error) {
     console.error('Error fetching default data:', error.message);
     res.status(500).json({ error: 'Failed to fetch market data' });
+  }
+});
+
+// Finnhub Fuzzy Search (Protected)
+app.get('/api/fuzzy-search', verifyToken, async (req, res) => {
+  const { query } = req.query;
+  if (!query || typeof query !== 'string') {
+    console.log('Missing or invalid query parameter:', req.query);
+    return res.status(400).json({ error: 'Query parameter is required' });
+  }
+
+  try {
+    const response = await axios.get(
+      `https://finnhub.io/api/v1/search?q=${encodeURIComponent(query)}&token=${FINNHUB_API_KEY}`
+    );
+    const results = response.data.result.map((item) => ({
+      symbol: item.symbol,
+      name: item.description,
+      type: item.type === 'Cryptocurrency' ? 'crypto' : 'stock',
+      exchange: item.displaySymbol.split('.')[1] || 'N/A',
+    }));
+    console.log(`Finnhub fuzzy search results for "${query}":`, results);
+    res.json(results.slice(0, 10));
+  } catch (error) {
+    console.error('Error fetching Finnhub fuzzy search:', error.message);
+    res.status(500).json({ error: 'Failed to fetch search results' });
+  }
+});
+
+// Binance Fuzzy Search (Protected)
+app.get('/api/binance-fuzzy-search', verifyToken, async (req, res) => {
+  const { query } = req.query;
+  if (!query || typeof query !== 'string') {
+    console.log('Missing or invalid query parameter:', req.query);
+    return res.status(400).json({ error: 'Query parameter is required' });
+  }
+
+  try {
+    // Fetch all trading pairs from Binance
+    const response = await axios.get('https://api.binance.com/api/v3/exchangeInfo', {
+      headers: { 'X-MBX-APIKEY': BINANCE_API_KEY },
+    });
+    const symbols = response.data.symbols;
+
+    // Fuzzy search simulation by filtering symbols
+    const queryLower = query.toLowerCase();
+    const results = symbols
+      .filter((item) => 
+        item.symbol.toLowerCase().includes(queryLower) || 
+        (item.baseAsset && item.baseAsset.toLowerCase().includes(queryLower)) ||
+        (item.quoteAsset && item.quoteAsset.toLowerCase().includes(queryLower))
+      )
+      .map((item) => ({
+        symbol: item.symbol,
+        name: `${item.baseAsset}/${item.quoteAsset}`,
+        type: item.symbol.includes('USDT') || item.symbol.includes('BTC') ? 'crypto' : 'crypto', // Simplistic type assumption
+        exchange: 'Binance',
+      }));
+
+    console.log(`Binance fuzzy search results for "${query}":`, results);
+    res.json(results.slice(0, 10));
+  } catch (error) {
+    console.error('Error fetching Binance fuzzy search:', error.message);
+    res.status(500).json({ error: 'Failed to fetch Binance search results' });
   }
 });
 
@@ -113,7 +189,7 @@ app.get('/api/search', verifyToken, async (req, res) => {
       change: quote.price.regularMarketChangePercent * 100,
       marketCap: quote.summaryDetail.marketCap
         ? formatMarketCap(quote.summaryDetail.marketCap)
-        : 'N/A'
+        : 'N/A',
     };
     console.log(`Fetched data for ${symbol}:`, data);
     res.json(data);
@@ -136,7 +212,6 @@ const categorizeTransaction = async (description) => {
     return sentiment === 'POSITIVE' ? 'Food' : 'Miscellaneous';
   } catch (error) {
     console.error('Error with Hugging Face API:', error.message);
-    // Fallback to mock categorization
     const lowerDesc = description.toLowerCase();
     if (lowerDesc.includes('coffee')) return 'Food';
     if (lowerDesc.includes('rent')) return 'Housing';
@@ -161,7 +236,7 @@ app.post('/transactions', verifyToken, async (req, res) => {
       date, 
       description, 
       category,
-      userId: req.user.id // Link to authenticated user
+      userId: req.user.id
     });
     console.log('Transaction to save:', transaction);
     const savedTransaction = await transaction.save();
@@ -186,8 +261,6 @@ app.get('/transactions', verifyToken, async (req, res) => {
 });
 
 // Authentication Endpoints
-
-// Login
 app.post('/api/login', async (req, res) => {
   const { email, password } = req.body;
   try {
@@ -211,7 +284,6 @@ app.post('/api/login', async (req, res) => {
   }
 });
 
-// Signup
 app.post('/api/signup', async (req, res) => {
   const { name, email, password } = req.body;
   try {
@@ -237,7 +309,6 @@ app.post('/api/signup', async (req, res) => {
   }
 });
 
-// Google Login
 app.post('/api/google-login', async (req, res) => {
   const { credential } = req.body;
   try {

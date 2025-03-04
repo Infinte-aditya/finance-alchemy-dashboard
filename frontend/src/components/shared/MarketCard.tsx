@@ -1,27 +1,26 @@
-
 import React from 'react';
 import Card from './Card';
 import { ArrowDown, ArrowUp } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 interface MarketCardProps {
-  symbol: string;
-  name: string;
-  price: number;
-  change: number;
-  changePercent: number;
-  type: 'stock' | 'crypto' | 'index';
+  symbol?: string;
+  name?: string;
+  price?: number;
+  change?: number;
+  changePercent?: number;
+  type?: 'stock' | 'crypto' | 'index';
   icon?: React.ReactNode;
   chart?: React.ReactNode;
 }
 
 const MarketCard: React.FC<MarketCardProps> = ({
-  symbol,
-  name,
-  price,
-  change,
-  changePercent,
-  type,
+  symbol = 'N/A',
+  name = 'Unknown',
+  price = 0,
+  change = 0,
+  changePercent = 0,
+  type = 'stock',
   icon,
   chart
 }) => {

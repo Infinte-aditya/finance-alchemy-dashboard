@@ -1,43 +1,25 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import Card from '@/components/shared/Card';
 import MarketCard from '@/components/shared/MarketCard';
-import InsightCard from '@/components/shared/InsightCard';
 import TransactionForm from '@/components/forms/TransactionForm';
+import { InsightsPanel } from '@/components/insights/InsightsPanel';
+import SearchBar from '@/components/shared/SearchBar';
 import { useAuth } from '@/hooks/useAuth';
 import { 
-  Line, 
-  LineChart, 
-  XAxis, 
-  YAxis, 
-  Tooltip, 
-  Area, 
-  AreaChart 
+  Line, LineChart, XAxis, YAxis, Tooltip, Area, AreaChart 
 } from 'recharts';
 import { 
-  AreaChart as AreaChartIcon,
-  ArrowUpRight, 
-  CreditCard, 
-  DollarSign, 
-  LineChart as LineChartIcon, 
-  PiggyBank,
-  RefreshCw,
-  TrendingUp, 
-  Upload,
-  Search,
-  Loader2,
+  AreaChart as AreaChartIcon, ArrowUpRight, CreditCard, DollarSign, 
+  LineChart as LineChartIcon, PiggyBank, RefreshCw, TrendingUp, Upload, Loader2 
 } from 'lucide-react';
 import Button from '@/components/shared/Button';
 import { useQuery } from '@tanstack/react-query';
-import { useDebounce } from 'use-debounce';
-import { Input } from '@/components/ui/input';
+import { toast } from 'sonner';
+import { useNavigate } from 'react-router-dom';
 
 const spendingData = [
-  { name: 'Jan', amount: 4000 },
-  { name: 'Feb', amount: 3000 },
-  { name: 'Mar', amount: 3500 },
-  { name: 'Apr', amount: 2780 },
-  { name: 'May', amount: 2890 },
-  { name: 'Jun', amount: 3390 },
+  { name: 'Jan', amount: 4000 }, { name: 'Feb', amount: 3000 }, { name: 'Mar', amount: 3500 },
+  { name: 'Apr', amount: 2780 }, { name: 'May', amount: 2890 }, { name: 'Jun', amount: 3390 },
   { name: 'Jul', amount: 3490 },
 ];
 
@@ -47,65 +29,87 @@ interface MarketData {
   price: number;
   change: number;
   marketCap: string;
+  type?: 'stock' | 'crypto';
 }
 
 const Dashboard = () => {
-  const { user } = useAuth();
-  const [loading, setLoading] = React.useState(false);
-  const [searchTerm, setSearchTerm] = React.useState('');
-  const [debouncedSearchTerm] = useDebounce(searchTerm, 500);
+  const { user, logout } = useAuth();
+  const navigate = useNavigate();
+  const [selectedMarkets, setSelectedMarkets] = useState<MarketData[]>([]); // State for selected market cards
 
-  // Fetch default market data on load
+  useEffect(() => {
+    if (!user) {
+      console.log('No user authenticated, redirecting to login');
+      navigate('/login');
+    }
+  }, [user, navigate]);
+
+  const [loading, setLoading] = React.useState(false);
+
   const fetchDefaultMarketData = async (): Promise<MarketData[]> => {
     const token = localStorage.getItem('finance_auth_token');
+    console.log('Fetching market data with token:', token);
+    if (!token) {
+      throw new Error('No token found');
+    }
     const response = await fetch('http://localhost:3001/api/market-data', {
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${token}`,
+      headers: { 
+        'Content-Type': 'application/json', 
+        'Authorization': `Bearer ${token}` 
       },
     });
-    if (!response.ok) throw new Error('Failed to fetch default market data');
+    
+    if (response.status === 429) {
+      toast.error('Too many requests - please wait before trying again');
+      throw new Error('Rate limit exceeded');
+    }
+    
+    if (response.status === 401) {
+      console.log('Received 401 from /api/market-data, logging out');
+      logout();
+      navigate('/login');
+      throw new Error('Session expired');
+    }
+    
+    if (!response.ok) {
+      console.error('Market data fetch failed:', response.statusText);
+      throw new Error('Failed to fetch default market data');
+    }
     return response.json();
   };
 
-  const { data: defaultMarketData, error: defaultError, isLoading: isDefaultLoading } = useQuery({
+  const { data: defaultMarketData, error: defaultError, isLoading: isDefaultLoading } = useQuery<MarketData[], Error>({
     queryKey: ['defaultMarketData'],
     queryFn: fetchDefaultMarketData,
   });
 
-  // Fetch search market data
-  const fetchSearchMarketData = async (symbol: string): Promise<MarketData> => {
-    const token = localStorage.getItem('finance_auth_token');
-    const response = await fetch(`http://localhost:3001/api/search?symbol=${symbol}`, {
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${token}`,
-      },
-    });
-    if (!response.ok) throw new Error('Failed to fetch market data');
-    return response.json();
-  };
-
-  const { data: searchResult, error: searchError, isLoading: isSearchLoading } = useQuery({
-    queryKey: ['marketData', debouncedSearchTerm],
-    queryFn: () => fetchSearchMarketData(debouncedSearchTerm),
-    enabled: !!debouncedSearchTerm.trim(),
-  });
-
-  // Fetch transactions
   const fetchTransactions = async (): Promise<any[]> => {
     const token = localStorage.getItem('finance_auth_token');
+    console.log('Fetching transactions with token:', token);
+    if (!token) {
+      throw new Error('No token found');
+    }
     const response = await fetch('http://localhost:3001/transactions', {
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${token}`,
-      },
+      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
     });
-    if (!response.ok) throw new Error('Failed to fetch transactions');
+    if (response.status === 429) {
+      toast.error('Too many requests - please wait before trying again');
+      throw new Error('Rate limit exceeded');
+    }
+    if (response.status === 401) {
+      console.log('Received 401 from /transactions, logging out');
+      logout();
+      navigate('/login');
+      throw new Error('Session expired');
+    }
+    if (!response.ok) {
+      console.error('Transactions fetch failed:', response.statusText);
+      throw new Error('Failed to fetch transactions');
+    }
     return response.json();
   };
 
-  const { data: transactions, error: txError, isLoading: isTxLoading, refetch: refetchTransactions } = useQuery({
+  const { data: transactions, error: txError, isLoading: isTxLoading, refetch: refetchTransactions } = useQuery<any[], Error>({
     queryKey: ['transactions'],
     queryFn: fetchTransactions,
   });
@@ -116,15 +120,48 @@ const Dashboard = () => {
   };
 
   const handleTransactionSuccess = () => {
-    refetchTransactions(); // Refresh transaction list after adding
+    refetchTransactions();
   };
+
+  const handleMarketSelect = (market: MarketData) => {
+    // Prevent duplicate cards
+    if (!selectedMarkets.some(m => m.symbol === market.symbol)) {
+      setSelectedMarkets(prev => [...prev, market]);
+    }
+  };
+
+  useEffect(() => {
+    if (defaultError) {
+      console.error('Default market data error:', defaultError.message);
+      if (defaultError.message === 'Session expired') {
+        logout();
+        navigate('/login');
+      } else {
+        toast.error(defaultError.message);
+      }
+    }
+    if (txError) {
+      console.error('Transactions error:', txError.message);
+      if (txError.message === 'Session expired') {
+        logout();
+        navigate('/login');
+      } else {
+        toast.error(txError.message);
+      }
+    }
+  }, [defaultError, txError, logout, navigate]);
+
+  if (!user) return <div>Please log in to view the dashboard</div>;
+  if (isDefaultLoading || isTxLoading) return <div>Loading...</div>;
+  if (defaultError) return <div>Error: {defaultError.message}</div>;
+  if (txError) return <div>Error: {txError.message}</div>;
 
   return (
     <div className="space-y-8">
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
           <h1 className="text-3xl font-bold">Dashboard</h1>
-          <p className="text-gray-600 dark:text-gray-300">Welcome back, {user?.name}</p>
+          <p className="text-gray-600 dark:text-gray-300">Welcome back, {user?.name || 'User'}</p>
         </div>
         <Button 
           variant="outline" 
@@ -140,57 +177,22 @@ const Dashboard = () => {
       </div>
 
       {/* Search Bar */}
-      <div className="flex items-center gap-2">
-        <Input
-          value={searchTerm}
-          onChange={(e) => setSearchTerm(e.target.value)}
-          placeholder="Search stocks or crypto (e.g., AAPL, BTC-USD)"
-          className="w-full max-w-md text-gray-900 dark:text-gray-200 dark:bg-gray-700"
-        />
-        {isSearchLoading && <Loader2 className="h-4 w-4 animate-spin" />}
-      </div>
+      <SearchBar onMarketSelect={handleMarketSelect} />
 
-      {/* Search Result */}
-      {searchError && (
-        <p className="text-finance-negative">Error: {(searchError as Error).message}</p>
-      )}
-      {searchResult && !isSearchLoading && (
+      {/* Selected Market Cards */}
+      {selectedMarkets.length > 0 && (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <MarketCard
-            symbol={searchResult.symbol}
-            name={searchResult.name}
-            price={searchResult.price}
-            change={searchResult.change}
-            changePercent={searchResult.change}
-            type={searchResult.symbol.includes('-') ? 'crypto' : 'stock'}
-            icon={
-              searchResult.symbol.includes('-') ? (
-                <AreaChartIcon className="h-5 w-5 text-purple-600" />
-              ) : (
-                <LineChartIcon className="h-5 w-5 text-blue-600" />
-              )
-            }
-          />
-        </div>
-      )}
-
-      {/* Default Market Data */}
-      {defaultError && (
-        <p className="text-finance-negative">Error: {(defaultError as Error).message}</p>
-      )}
-      {defaultMarketData && !isDefaultLoading && (
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          {defaultMarketData.map((item: MarketData) => (
+          {selectedMarkets.map((market) => (
             <MarketCard
-              key={item.symbol}
-              symbol={item.symbol}
-              name={item.name}
-              price={item.price}
-              change={item.change}
-              changePercent={item.change}
-              type={item.symbol.includes('-') ? 'crypto' : 'stock'}
+              key={market.symbol}
+              symbol={market.symbol}
+              name={market.name}
+              price={market.price}
+              change={market.change}
+              changePercent={market.change}
+              type={market.type || (market.symbol.includes('-') ? 'crypto' : 'stock')}
               icon={
-                item.symbol.includes('-') ? (
+                market.type === 'crypto' || market.symbol.includes('-') ? (
                   <AreaChartIcon className="h-5 w-5 text-purple-600" />
                 ) : (
                   <LineChartIcon className="h-5 w-5 text-blue-600" />
@@ -201,12 +203,38 @@ const Dashboard = () => {
         </div>
       )}
 
+      {/* Top Performers Market Data */}
+      {defaultMarketData && !isDefaultLoading && (
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          {defaultMarketData
+            .filter(item => item && item.symbol && item.name && typeof item.price === 'number' && typeof item.change === 'number')
+            .map((item: MarketData) => (
+              <MarketCard
+                key={item.symbol}
+                symbol={item.symbol || 'N/A'}
+                name={item.name || 'Unknown'}
+                price={item.price ?? 0}
+                change={item.change ?? 0}
+                changePercent={item.change ?? 0}
+                type={item.type as 'crypto' | 'stock' || 'stock'}
+                icon={
+                  item.type === 'crypto' ? (
+                    <AreaChartIcon className="h-5 w-5 text-purple-600" />
+                  ) : (
+                    <LineChartIcon className="h-5 w-5 text-blue-600" />
+                  )
+                }
+              />
+            ))}
+        </div>
+      )}
+
       {/* Existing Metrics */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
         {[
-          { title: 'Total Balance', value: '$24,560.00', change: '+4.3%', isPositive: true, icon: <DollarSign className="h-5 w-5 text-white" />, color: 'bg-primary' },
-          { title: 'Monthly Expenses', value: '$3,180.40', change: '-2.1%', isPositive: true, icon: <CreditCard className="h-5 w-5 text-white" />, color: 'bg-finance-blue' },
-          { title: 'Investments', value: '$28,450.90', change: '+8.2%', isPositive: true, icon: <TrendingUp className="h-5 w-5 text-white" />, color: 'bg-finance-green' },
+          { title: 'Total Balance', value: '₹24,56,000', change: '+4.3%', isPositive: true, icon: <DollarSign className="h-5 w-5 text-white" />, color: 'bg-primary' },
+          { title: 'Monthly Expenses', value: '₹3,18,040', change: '-2.1%', isPositive: true, icon: <CreditCard className="h-5 w-5 text-white" />, color: 'bg-finance-blue' },
+          { title: 'Investments', value: '₹28,45,090', change: '+8.2%', isPositive: true, icon: <TrendingUp className="h-5 w-5 text-white" />, color: 'bg-finance-green' },
           { title: 'Savings Goal', value: '68%', change: '+2.3%', isPositive: true, icon: <PiggyBank className="h-5 w-5 text-white" />, color: 'bg-purple-500' },
         ].map((metric, index) => (
           <Card key={index} className="flex items-start">
@@ -263,18 +291,21 @@ const Dashboard = () => {
               <h3 className="text-lg font-medium">Add Transaction</h3>
             </div>
             <TransactionForm onSuccess={handleTransactionSuccess} />
-            {/* Transaction List */}
             <div className="mt-6">
               <h3 className="text-lg font-medium mb-2">Recent Transactions</h3>
               {txError && (
-                <p className="text-finance-negative">Error: {(txError as Error).message}</p>
+                <p className="text-finance-negative">
+                  {(txError as Error).message.includes('429') 
+                    ? 'Transactions temporarily unavailable - too many requests'
+                    : (txError as Error).message}
+                </p>
               )}
               {isTxLoading && <Loader2 className="h-5 w-5 animate-spin mx-auto" />}
               {transactions && !isTxLoading && (
                 <ul className="space-y-2 max-h-40 overflow-y-auto">
                   {transactions.map((tx) => (
                     <li key={tx._id} className="text-sm text-gray-700 dark:text-gray-300">
-                      {tx.description} - ${tx.amount} ({tx.category}) on {new Date(tx.date).toLocaleDateString()}
+                      {tx.description || 'No description'} - ₹{tx.amount || 0} ({tx.category || 'Uncategorized'}) on {new Date(tx.date || Date.now()).toLocaleDateString()}
                     </li>
                   ))}
                 </ul>
@@ -289,29 +320,7 @@ const Dashboard = () => {
           <h2 className="text-xl font-semibold">AI Insights</h2>
           <Button variant="ghost" size="sm">View All</Button>
         </div>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          <InsightCard
-            title="Reduce Subscription Costs"
-            description="You're spending $94/month on subscriptions you rarely use."
-            category="spending"
-            actionText="View Subscriptions"
-            onAction={() => console.log('View subscriptions')}
-          />
-          <InsightCard
-            title="Investment Opportunity"
-            description="Consider allocating 10% to tech ETFs for diversification."
-            category="investment"
-            actionText="Explore Options"
-            onAction={() => console.log('Explore investment options')}
-          />
-          <InsightCard
-            title="Unusual Spending"
-            description="Dining expenses are 43% higher than average."
-            category="spending"
-            actionText="View Transactions"
-            onAction={() => console.log('View transactions')}
-          />
-        </div>
+        <InsightsPanel />
       </div>
     </div>
   );

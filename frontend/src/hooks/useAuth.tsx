@@ -1,4 +1,4 @@
-// hooks/useAuth.tsx
+// frontend/src/hooks/useAuth.tsx
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
@@ -8,51 +8,34 @@ interface User {
   name: string;
   email: string;
   avatar?: string;
-  token?: string;
+  token: string;
 }
 
 interface AuthContextType {
   user: User | null;
-  isLoading: boolean;
   login: (email: string, password: string) => Promise<void>;
-  signup: (name: string, email: string, password: string) => Promise<void>;
-  logout: () => void;
   googleLogin: (credential: string) => Promise<void>;
+  logout: () => void;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-interface AuthProviderProps {
-  children: React.ReactNode;
-}
-
-export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
+export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
   const navigate = useNavigate();
 
+  // Check for existing token on mount
   useEffect(() => {
-    const checkAuth = async () => {
-      try {
-        const savedUser = localStorage.getItem('finance_auth_user');
-        const savedToken = localStorage.getItem('finance_auth_token');
-        if (savedUser && savedToken) {
-          const parsedUser = JSON.parse(savedUser);
-          setUser({ ...parsedUser, token: savedToken });
-        }
-      } catch (error) {
-        console.error('Auth check failed:', error);
-        localStorage.removeItem('finance_auth_user');
-        localStorage.removeItem('finance_auth_token');
-      } finally {
-        setIsLoading(false);
-      }
-    };
-    checkAuth();
+    const token = localStorage.getItem('finance_auth_token');
+    if (token) {
+      // Optionally validate token with backend here
+      // For simplicity, assume it's valid and fetch user data if needed
+      setUser({ id: '', name: '', email: '', token }); // Placeholder; fetch real user data if available
+      console.log('Token found on mount:', token); // Debug log
+    }
   }, []);
 
   const login = async (email: string, password: string) => {
-    setIsLoading(true);
     try {
       const response = await fetch('http://localhost:3001/api/login', {
         method: 'POST',
@@ -60,61 +43,20 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         body: JSON.stringify({ email, password }),
       });
       const data = await response.json();
-      if (!response.ok) throw new Error(data.message || 'Invalid credentials');
-      const userData: User = {
-        id: data.id,
-        name: data.name,
-        email: data.email,
-        avatar: data.avatar || `https://api.dicebear.com/6.x/avataaars/svg?seed=${email}`,
-        token: data.token,
-      };
-      localStorage.setItem('finance_auth_user', JSON.stringify(userData));
+      if (!response.ok) throw new Error(data.message || 'Login failed');
       localStorage.setItem('finance_auth_token', data.token);
-      setUser(userData);
+      console.log('Token stored after login:', data.token); // Debug log
+      setUser({ id: data.id, name: data.name, email: data.email, avatar: data.avatar, token: data.token });
+      navigate('/dashboard');
       toast.success('Logged in successfully');
-      navigate('/dashboard');
-    } catch (error: any) {
-      console.error('Login failed:', error);
-      toast.error(error.message || 'Login failed. Please check your credentials and try again.');
+    } catch (error) {
+      console.error('Login error:', error.message);
+      toast.error(error.message || 'Login failed');
       throw error;
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const signup = async (name: string, email: string, password: string) => {
-    setIsLoading(true);
-    try {
-      const response = await fetch('http://localhost:3001/api/signup', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name, email, password }),
-      });
-      const data = await response.json();
-      if (!response.ok) throw new Error(data.message || 'Signup failed');
-      const userData: User = {
-        id: data.id,
-        name: data.name,
-        email: data.email,
-        avatar: data.avatar || `https://api.dicebear.com/6.x/avataaars/svg?seed=${email}`,
-        token: data.token,
-      };
-      localStorage.setItem('finance_auth_user', JSON.stringify(userData));
-      localStorage.setItem('finance_auth_token', data.token);
-      setUser(userData);
-      toast.success('Account created successfully');
-      navigate('/dashboard');
-    } catch (error: any) {
-      console.error('Signup failed:', error);
-      toast.error(error.message || 'Signup failed. Please try again.');
-      throw error;
-    } finally {
-      setIsLoading(false);
     }
   };
 
   const googleLogin = async (credential: string) => {
-    setIsLoading(true);
     try {
       const response = await fetch('http://localhost:3001/api/google-login', {
         method: 'POST',
@@ -122,41 +64,30 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         body: JSON.stringify({ credential }),
       });
       const data = await response.json();
+      console.log('Backend response:', data); // Debug log
       if (!response.ok) throw new Error(data.message || 'Google login failed');
-      const userData: User = {
-        id: data.id,
-        name: data.name,
-        email: data.email,
-        avatar: data.avatar || `https://api.dicebear.com/6.x/avataaars/svg?seed=${data.email}`,
-        token: data.token,
-      };
-      localStorage.setItem('finance_auth_user', JSON.stringify(userData));
       localStorage.setItem('finance_auth_token', data.token);
-      setUser(userData);
-      toast.success('Logged in with Google successfully');
+      console.log('Token stored after Google login:', data.token); // Debug log
+      setUser({ id: data.id, name: data.name, email: data.email, avatar: data.avatar, token: data.token });
       navigate('/dashboard');
-    } catch (error: any) {
+      toast.success('Logged in with Google successfully');
+    } catch (error) {
       console.error('Google login failed:', error);
-      toast.error(error.message || 'Google login failed. Please try again.');
+      toast.error(error.message || 'Google login failed');
       throw error;
-    } finally {
-      setIsLoading(false);
     }
   };
 
   const logout = () => {
-    localStorage.removeItem('finance_auth_user');
     localStorage.removeItem('finance_auth_token');
     setUser(null);
-    toast.success('Logged out successfully');
     navigate('/login');
+    toast.info('Logged out successfully');
   };
 
-  return (
-    <AuthContext.Provider value={{ user, isLoading, login, signup, logout, googleLogin }}>
-      {children}
-    </AuthContext.Provider>
-  );
+  const value = { user, login, googleLogin, logout };
+
+  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 };
 
 export const useAuth = () => {

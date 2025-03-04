@@ -19,6 +19,7 @@ import SignUp from "./pages/Auth/SignUp";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
+console.log('Google Client ID:', import.meta.env.VITE_GOOGLE_CLIENT_ID);
 
 const App = () => (
   <QueryClientProvider client={queryClient}>
