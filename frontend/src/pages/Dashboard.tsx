@@ -30,12 +30,13 @@ interface MarketData {
   change: number;
   marketCap: string;
   type?: 'stock' | 'crypto';
+  currency: string; // Added currency field
 }
 
 const Dashboard = () => {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
-  const [selectedMarkets, setSelectedMarkets] = useState<MarketData[]>([]); // State for selected market cards
+  const [selectedMarkets, setSelectedMarkets] = useState<MarketData[]>([]);
 
   useEffect(() => {
     if (!user) {
@@ -124,7 +125,6 @@ const Dashboard = () => {
   };
 
   const handleMarketSelect = (market: MarketData) => {
-    // Prevent duplicate cards
     if (!selectedMarkets.some(m => m.symbol === market.symbol)) {
       setSelectedMarkets(prev => [...prev, market]);
     }
@@ -191,6 +191,7 @@ const Dashboard = () => {
               change={market.change}
               changePercent={market.change}
               type={market.type || (market.symbol.includes('-') ? 'crypto' : 'stock')}
+              currency={market.currency} // Pass currency prop
               icon={
                 market.type === 'crypto' || market.symbol.includes('-') ? (
                   <AreaChartIcon className="h-5 w-5 text-purple-600" />
@@ -217,6 +218,7 @@ const Dashboard = () => {
                 change={item.change ?? 0}
                 changePercent={item.change ?? 0}
                 type={item.type as 'crypto' | 'stock' || 'stock'}
+                currency={item.currency} // Pass currency prop
                 icon={
                   item.type === 'crypto' ? (
                     <AreaChartIcon className="h-5 w-5 text-purple-600" />

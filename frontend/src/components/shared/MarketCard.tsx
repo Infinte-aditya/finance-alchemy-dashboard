@@ -10,9 +10,19 @@ interface MarketCardProps {
   change?: number;
   changePercent?: number;
   type?: 'stock' | 'crypto' | 'index';
+  currency?: string; // Added currency prop
   icon?: React.ReactNode;
   chart?: React.ReactNode;
 }
+
+const currencySymbols: { [key: string]: string } = {
+  USD: '$',
+  EUR: '€',
+  GBP: '£',
+  JPY: '¥',
+  INR: '₹',
+  // Add more currencies as needed
+};
 
 const MarketCard: React.FC<MarketCardProps> = ({
   symbol = 'N/A',
@@ -21,11 +31,13 @@ const MarketCard: React.FC<MarketCardProps> = ({
   change = 0,
   changePercent = 0,
   type = 'stock',
+  currency = 'USD', // Default to USD if not provided
   icon,
   chart
 }) => {
   const isPositive = change >= 0;
-  
+  const currencySymbol = currencySymbols[currency] || currency; // Use symbol if available, else currency code
+
   return (
     <Card 
       variant="default" 
@@ -53,7 +65,9 @@ const MarketCard: React.FC<MarketCardProps> = ({
         
         <div className="flex-grow">
           <div className="flex justify-between items-center mb-2">
-            <span className="text-2xl font-semibold">${price.toLocaleString()}</span>
+            <span className="text-2xl font-semibold">
+              {currencySymbol}{price.toLocaleString()}
+            </span>
             <div className={cn(
               "flex items-center rounded-full px-2 py-1",
               isPositive ? "bg-finance-light-green text-finance-green" : "bg-red-100 text-finance-negative"

@@ -3,9 +3,8 @@ import { useQuery } from '@tanstack/react-query';
 import { Input } from '@/components/ui/input';
 import Button from '@/components/shared/Button';
 import { Loader2, Search } from 'lucide-react';
-import { toast } from 'sonner';
-import MarketCard from './MarketCard';
 
+// Interfaces
 interface SearchResult {
   symbol: string;
   name: string;
@@ -20,6 +19,7 @@ interface MarketData {
   change: number;
   marketCap: string;
   type?: 'stock' | 'crypto';
+  currency?: string;
 }
 
 interface SearchBarProps {
@@ -29,30 +29,39 @@ interface SearchBarProps {
 const SearchBar: React.FC<SearchBarProps> = ({ onMarketSelect }) => {
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedSymbol, setSelectedSymbol] = useState<string | null>(null);
-  const [useBinance, setUseBinance] = useState(false); // Toggle between Binance and Finnhub
+  const [isDropdownOpen, setIsDropdownOpen] = useState(false);
 
+  // Fetch search results from both Finnhub and Binance
   const fetchFuzzySearch = async (query: string): Promise<SearchResult[]> => {
     const token = localStorage.getItem('finance_auth_token');
     if (!token) throw new Error('No token found');
-    const endpoint = useBinance ? '/api/binance-fuzzy-search' : '/api/fuzzy-search';
-    const response = await fetch(
-      `http://localhost:3001${endpoint}?query=${encodeURIComponent(query)}`,
-      {
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`,
-        },
-      }
+
+    const headers = {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${token}`,
+    };
+
+    const finnhubPromise = fetch(
+      `http://localhost:3001/api/fuzzy-search?query=${encodeURIComponent(query)}`,
+      { headers }
+    ).then(res => res.ok ? res.json() : []);
+
+    const binancePromise = fetch(
+      `http://localhost:3001/api/binance-fuzzy-search?query=${encodeURIComponent(query)}`,
+      { headers }
+    ).then(res => res.ok ? res.json() : []);
+
+    const [finnhubResults, binanceResults] = await Promise.all([finnhubPromise, binancePromise]);
+
+    const combinedResults = [...finnhubResults, ...binanceResults];
+    const uniqueResults = Array.from(
+      new Map(combinedResults.map(item => [item.symbol, item])).values()
     );
-    if (response.status === 401) {
-      throw new Error('Session expired');
-    }
-    if (!response.ok) {
-      throw new Error(`Failed to fetch ${useBinance ? 'Binance' : 'Finnhub'} search results`);
-    }
-    return response.json();
+
+    return uniqueResults.slice(0, 10);
   };
 
+  // Fetch detailed market data
   const fetchMarketData = async (symbol: string): Promise<MarketData> => {
     const token = localStorage.getItem('finance_auth_token');
     if (!token) throw new Error('No token found');
@@ -65,41 +74,41 @@ const SearchBar: React.FC<SearchBarProps> = ({ onMarketSelect }) => {
         },
       }
     );
-    if (response.status === 401) {
-      throw new Error('Session expired');
-    }
-    if (!response.ok) {
-      throw new Error('Failed to fetch market data');
-    }
+    if (!response.ok) throw new Error('Failed to fetch market data');
     return response.json();
   };
 
-  const { data: searchResults, error: searchError, isLoading: isSearchLoading, refetch: refetchFuzzy } = useQuery({
-    queryKey: ['fuzzySearch', searchTerm, useBinance],
+  // React Query hooks
+  const { data: searchResults, isLoading: isSearchLoading, error: searchError, refetch: refetchFuzzy } = useQuery({
+    queryKey: ['fuzzySearch', searchTerm],
     queryFn: () => fetchFuzzySearch(searchTerm),
     enabled: false,
   });
 
-  const { data: marketData, error: marketError, isLoading: isMarketLoading, refetch: refetchMarket } = useQuery({
+  const { data: marketData, isLoading: isMarketLoading, error: marketError, refetch: refetchMarket } = useQuery({
     queryKey: ['marketData', selectedSymbol],
     queryFn: () => fetchMarketData(selectedSymbol!),
     enabled: !!selectedSymbol,
   });
 
+  // Handlers
   const handleSearch = () => {
     if (searchTerm.trim()) {
+      setIsDropdownOpen(true);
       refetchFuzzy();
     }
   };
 
   const handleKeyPress = (e: React.KeyboardEvent) => {
     if (e.key === 'Enter' && searchTerm.trim()) {
+      setIsDropdownOpen(true);
       refetchFuzzy();
     }
   };
 
   const handleSelect = (symbol: string) => {
     setSelectedSymbol(symbol);
+    setIsDropdownOpen(false); // Close dropdown
     refetchMarket().then((result) => {
       if (result.data) {
         onMarketSelect(result.data);
@@ -108,7 +117,7 @@ const SearchBar: React.FC<SearchBarProps> = ({ onMarketSelect }) => {
   };
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-4 relative">
       <div className="flex items-center gap-2">
         <Input
           value={searchTerm}
@@ -120,23 +129,15 @@ const SearchBar: React.FC<SearchBarProps> = ({ onMarketSelect }) => {
         <Button onClick={handleSearch} disabled={isSearchLoading}>
           {isSearchLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Search className="h-4 w-4" />}
         </Button>
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={() => setUseBinance(!useBinance)}
-          className="ml-2"
-        >
-          {useBinance ? 'Switch to Finnhub' : 'Switch to Binance'}
-        </Button>
       </div>
 
       {searchError && (
-        <p className="text-finance-negative">
+        <p className="text-red-500">
           Error: {(searchError as Error).message || 'Could not fetch search results'}
         </p>
       )}
 
-      {searchResults && !isSearchLoading && searchTerm && (
+      {searchResults && !isSearchLoading && searchTerm && isDropdownOpen && (
         <div className="absolute z-10 mt-1 w-full max-w-md bg-white dark:bg-gray-800 rounded-md shadow-lg max-h-60 overflow-y-auto">
           {searchResults.map((result) => (
             <div
@@ -152,7 +153,7 @@ const SearchBar: React.FC<SearchBarProps> = ({ onMarketSelect }) => {
       )}
 
       {marketError && (
-        <p className="text-finance-negative">
+        <p className="text-red-500">
           Error: {(marketError as Error).message || 'Could not fetch market data'}
         </p>
       )}

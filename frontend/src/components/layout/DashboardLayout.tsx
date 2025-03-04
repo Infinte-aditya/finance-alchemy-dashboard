@@ -6,7 +6,14 @@ import { useAuth } from '@/hooks/useAuth';
 import { Loader2 } from 'lucide-react';
 
 const DashboardLayout = () => {
-  const { user, isLoading } = useAuth();
+  const { user } = useAuth();
+  const [isLoading, setIsLoading] = React.useState(true);
+
+  React.useEffect(() => {
+    if (user !== undefined) {
+      setIsLoading(false);
+    }
+  }, [user]);
   const location = useLocation();
 
   if (isLoading) {
