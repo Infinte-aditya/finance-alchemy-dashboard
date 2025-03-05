@@ -1,9 +1,47 @@
-
 import React from 'react';
 import { IndianRupee, TrendingUp, AlertTriangle, LineChart } from 'lucide-react';
 import Card from '@/components/shared/Card';
+import { useQuery } from '@tanstack/react-query';
+import { useAuth } from '@/hooks/useAuth';
+import { useNavigate } from 'react-router-dom';
+import { toast } from 'sonner';
+
+interface SpendingByCategory {
+  category: string;
+  totalAmount: number;
+}
 
 const Insights = () => {
+  const { user, logout } = useAuth();
+  const navigate = useNavigate();
+
+  const fetchSpendingByCategory = async (): Promise<SpendingByCategory[]> => {
+    const token = localStorage.getItem('finance_auth_token');
+    if (!token) throw new Error('No token found');
+    const response = await fetch('http://localhost:3001/api/spending-by-category', {
+      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+    });
+    if (response.status === 429) throw new Error('Rate limit exceeded');
+    if (response.status === 401) {
+      logout();
+      navigate('/login');
+      throw new Error('Session expired');
+    }
+    if (!response.ok) throw new Error('Failed to fetch spending by category');
+    return response.json();
+  };
+
+  const { data: spendingByCategory, error: spendingError, isLoading: isSpendingLoading } = useQuery<SpendingByCategory[], Error>({
+    queryKey: ['spendingByCategory'],
+    queryFn: fetchSpendingByCategory,
+  });
+
+  if (!user) return <div>Please log in to view insights</div>;
+  if (isSpendingLoading) return <div>Loading...</div>;
+  if (spendingError) return <div>Error: {spendingError.message}</div>;
+
+  const topCategories = spendingByCategory?.sort((a, b) => b.totalAmount - a.totalAmount).slice(0, 3) || [];
+
   return (
     <div className="space-y-8">
       <h1 className="text-3xl font-bold">Insights</h1>
@@ -60,48 +98,22 @@ const Insights = () => {
             Analysis of your recent spending patterns:
           </p>
           <div className="space-y-4">
-            <div>
-              <div className="mb-1 flex items-center justify-between">
-                <span className="text-sm font-medium">Food Delivery</span>
-                <span className="flex items-center text-sm font-medium">
-                  <IndianRupee className="h-3 w-3" /> 8,540
-                </span>
+            {topCategories.map((item, index) => (
+              <div key={item.category}>
+                <div className="mb-1 flex items-center justify-between">
+                  <span className="text-sm font-medium">{item.category}</span>
+                  <span className="flex items-center text-sm font-medium">
+                    <IndianRupee className="h-3 w-3" /> {item.totalAmount.toLocaleString()}
+                  </span>
+                </div>
+                <div className="h-2 w-full rounded-full bg-gray-200 dark:bg-gray-700">
+                  <div className="h-2 rounded-full bg-finance-negative" style={{ width: `${Math.min((item.totalAmount / (topCategories[0].totalAmount || 1)) * 100, 100)}%` }}></div>
+                </div>
+                <p className="mt-1 text-xs text-gray-500">
+                  {index === 0 ? 'Highest spending category this month.' : 'Consider reviewing expenses in this category.'}
+                </p>
               </div>
-              <div className="h-2 w-full rounded-full bg-gray-200 dark:bg-gray-700">
-                <div className="h-2 rounded-full bg-finance-negative" style={{ width: '75%' }}></div>
-              </div>
-              <p className="mt-1 text-xs text-gray-500">
-                40% higher than your monthly average. Consider cooking at home more often.
-              </p>
-            </div>
-            <div>
-              <div className="mb-1 flex items-center justify-between">
-                <span className="text-sm font-medium">Subscriptions</span>
-                <span className="flex items-center text-sm font-medium">
-                  <IndianRupee className="h-3 w-3" /> 2,390
-                </span>
-              </div>
-              <div className="h-2 w-full rounded-full bg-gray-200 dark:bg-gray-700">
-                <div className="h-2 rounded-full bg-finance-negative" style={{ width: '55%' }}></div>
-              </div>
-              <p className="mt-1 text-xs text-gray-500">
-                You have 6 active subscriptions. Consider reviewing and canceling unused ones.
-              </p>
-            </div>
-            <div>
-              <div className="mb-1 flex items-center justify-between">
-                <span className="text-sm font-medium">Utility Bills</span>
-                <span className="flex items-center text-sm font-medium">
-                  <IndianRupee className="h-3 w-3" /> 3,870
-                </span>
-              </div>
-              <div className="h-2 w-full rounded-full bg-gray-200 dark:bg-gray-700">
-                <div className="h-2 rounded-full bg-finance-positive" style={{ width: '30%' }}></div>
-              </div>
-              <p className="mt-1 text-xs text-gray-500">
-                15% lower than last month. Your energy-saving efforts are working.
-              </p>
-            </div>
+            ))}
           </div>
         </Card>
       </div>

@@ -5,9 +5,7 @@ import TransactionForm from '@/components/forms/TransactionForm';
 import { InsightsPanel } from '@/components/insights/InsightsPanel';
 import SearchBar from '@/components/shared/SearchBar';
 import { useAuth } from '@/hooks/useAuth';
-import { 
-  Line, LineChart, XAxis, YAxis, Tooltip, Area, AreaChart 
-} from 'recharts';
+import { Bar, BarChart, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts';
 import { 
   AreaChart as AreaChartIcon, ArrowUpRight, CreditCard, DollarSign, 
   LineChart as LineChartIcon, PiggyBank, RefreshCw, TrendingUp, Upload, Loader2 
@@ -17,12 +15,6 @@ import { useQuery } from '@tanstack/react-query';
 import { toast } from 'sonner';
 import { useNavigate } from 'react-router-dom';
 
-const spendingData = [
-  { name: 'Jan', amount: 4000 }, { name: 'Feb', amount: 3000 }, { name: 'Mar', amount: 3500 },
-  { name: 'Apr', amount: 2780 }, { name: 'May', amount: 2890 }, { name: 'Jun', amount: 3390 },
-  { name: 'Jul', amount: 3490 },
-];
-
 interface MarketData {
   name: string;
   symbol: string;
@@ -30,13 +22,19 @@ interface MarketData {
   change: number;
   marketCap: string;
   type?: 'stock' | 'crypto';
-  currency: string; // Added currency field
+  currency: string;
+}
+
+interface SpendingByCategory {
+  category: string;
+  totalAmount: number;
 }
 
 const Dashboard = () => {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
   const [selectedMarkets, setSelectedMarkets] = useState<MarketData[]>([]);
+  const [loading, setLoading] = useState(false);
 
   useEffect(() => {
     if (!user) {
@@ -45,37 +43,51 @@ const Dashboard = () => {
     }
   }, [user, navigate]);
 
-  const [loading, setLoading] = React.useState(false);
-
   const fetchDefaultMarketData = async (): Promise<MarketData[]> => {
     const token = localStorage.getItem('finance_auth_token');
-    console.log('Fetching market data with token:', token);
-    if (!token) {
-      throw new Error('No token found');
-    }
+    if (!token) throw new Error('No token found');
     const response = await fetch('http://localhost:3001/api/market-data', {
-      headers: { 
-        'Content-Type': 'application/json', 
-        'Authorization': `Bearer ${token}` 
-      },
+      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
     });
-    
-    if (response.status === 429) {
-      toast.error('Too many requests - please wait before trying again');
-      throw new Error('Rate limit exceeded');
-    }
-    
+    if (response.status === 429) throw new Error('Rate limit exceeded');
     if (response.status === 401) {
-      console.log('Received 401 from /api/market-data, logging out');
       logout();
       navigate('/login');
       throw new Error('Session expired');
     }
-    
-    if (!response.ok) {
-      console.error('Market data fetch failed:', response.statusText);
-      throw new Error('Failed to fetch default market data');
+    if (!response.ok) throw new Error('Failed to fetch default market data');
+    return response.json();
+  };
+
+  const fetchTransactions = async (): Promise<any[]> => {
+    const token = localStorage.getItem('finance_auth_token');
+    if (!token) throw new Error('No token found');
+    const response = await fetch('http://localhost:3001/transactions', {
+      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+    });
+    if (response.status === 429) throw new Error('Rate limit exceeded');
+    if (response.status === 401) {
+      logout();
+      navigate('/login');
+      throw new Error('Session expired');
     }
+    if (!response.ok) throw new Error('Failed to fetch transactions');
+    return response.json();
+  };
+
+  const fetchSpendingByCategory = async (): Promise<SpendingByCategory[]> => {
+    const token = localStorage.getItem('finance_auth_token');
+    if (!token) throw new Error('No token found');
+    const response = await fetch('http://localhost:3001/api/spending-by-category', {
+      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+    });
+    if (response.status === 429) throw new Error('Rate limit exceeded');
+    if (response.status === 401) {
+      logout();
+      navigate('/login');
+      throw new Error('Session expired');
+    }
+    if (!response.ok) throw new Error('Failed to fetch spending by category');
     return response.json();
   };
 
@@ -84,44 +96,26 @@ const Dashboard = () => {
     queryFn: fetchDefaultMarketData,
   });
 
-  const fetchTransactions = async (): Promise<any[]> => {
-    const token = localStorage.getItem('finance_auth_token');
-    console.log('Fetching transactions with token:', token);
-    if (!token) {
-      throw new Error('No token found');
-    }
-    const response = await fetch('http://localhost:3001/transactions', {
-      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
-    });
-    if (response.status === 429) {
-      toast.error('Too many requests - please wait before trying again');
-      throw new Error('Rate limit exceeded');
-    }
-    if (response.status === 401) {
-      console.log('Received 401 from /transactions, logging out');
-      logout();
-      navigate('/login');
-      throw new Error('Session expired');
-    }
-    if (!response.ok) {
-      console.error('Transactions fetch failed:', response.statusText);
-      throw new Error('Failed to fetch transactions');
-    }
-    return response.json();
-  };
-
   const { data: transactions, error: txError, isLoading: isTxLoading, refetch: refetchTransactions } = useQuery<any[], Error>({
     queryKey: ['transactions'],
     queryFn: fetchTransactions,
   });
 
+  const { data: spendingByCategory, error: spendingError, isLoading: isSpendingLoading, refetch: refetchSpendingByCategory } = useQuery<SpendingByCategory[], Error>({
+    queryKey: ['spendingByCategory'],
+    queryFn: fetchSpendingByCategory,
+  });
+
   const refreshData = () => {
     setLoading(true);
+    refetchTransactions();
+    refetchSpendingByCategory();
     setTimeout(() => setLoading(false), 1500);
   };
 
   const handleTransactionSuccess = () => {
     refetchTransactions();
+    refetchSpendingByCategory();
   };
 
   const handleMarketSelect = (market: MarketData) => {
@@ -131,30 +125,17 @@ const Dashboard = () => {
   };
 
   useEffect(() => {
-    if (defaultError) {
-      console.error('Default market data error:', defaultError.message);
-      if (defaultError.message === 'Session expired') {
-        logout();
-        navigate('/login');
-      } else {
-        toast.error(defaultError.message);
-      }
+    if (defaultError) toast.error(defaultError.message);
+    if (txError) toast.error(txError.message);
+    if (spendingError) toast.error(spendingError.message);
+    if (defaultError?.message === 'Session expired' || txError?.message === 'Session expired' || spendingError?.message === 'Session expired') {
+      logout();
+      navigate('/login');
     }
-    if (txError) {
-      console.error('Transactions error:', txError.message);
-      if (txError.message === 'Session expired') {
-        logout();
-        navigate('/login');
-      } else {
-        toast.error(txError.message);
-      }
-    }
-  }, [defaultError, txError, logout, navigate]);
+  }, [defaultError, txError, spendingError, logout, navigate]);
 
   if (!user) return <div>Please log in to view the dashboard</div>;
-  if (isDefaultLoading || isTxLoading) return <div>Loading...</div>;
-  if (defaultError) return <div>Error: {defaultError.message}</div>;
-  if (txError) return <div>Error: {txError.message}</div>;
+  if (isDefaultLoading || isTxLoading || isSpendingLoading) return <div>Loading...</div>;
 
   return (
     <div className="space-y-8">
@@ -176,10 +157,8 @@ const Dashboard = () => {
         </Button>
       </div>
 
-      {/* Search Bar */}
       <SearchBar onMarketSelect={handleMarketSelect} />
 
-      {/* Selected Market Cards */}
       {selectedMarkets.length > 0 && (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           {selectedMarkets.map((market) => (
@@ -191,20 +170,13 @@ const Dashboard = () => {
               change={market.change}
               changePercent={market.change}
               type={market.type || (market.symbol.includes('-') ? 'crypto' : 'stock')}
-              currency={market.currency} // Pass currency prop
-              icon={
-                market.type === 'crypto' || market.symbol.includes('-') ? (
-                  <AreaChartIcon className="h-5 w-5 text-purple-600" />
-                ) : (
-                  <LineChartIcon className="h-5 w-5 text-blue-600" />
-                )
-              }
+              currency={market.currency}
+              icon={market.type === 'crypto' || market.symbol.includes('-') ? <AreaChartIcon className="h-5 w-5 text-purple-600" /> : <LineChartIcon className="h-5 w-5 text-blue-600" />}
             />
           ))}
         </div>
       )}
 
-      {/* Top Performers Market Data */}
       {defaultMarketData && !isDefaultLoading && (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           {defaultMarketData
@@ -218,20 +190,13 @@ const Dashboard = () => {
                 change={item.change ?? 0}
                 changePercent={item.change ?? 0}
                 type={item.type as 'crypto' | 'stock' || 'stock'}
-                currency={item.currency} // Pass currency prop
-                icon={
-                  item.type === 'crypto' ? (
-                    <AreaChartIcon className="h-5 w-5 text-purple-600" />
-                  ) : (
-                    <LineChartIcon className="h-5 w-5 text-blue-600" />
-                  )
-                }
+                currency={item.currency}
+                icon={item.type === 'crypto' ? <AreaChartIcon className="h-5 w-5 text-purple-600" /> : <LineChartIcon className="h-5 w-5 text-blue-600" />}
               />
             ))}
         </div>
       )}
 
-      {/* Existing Metrics */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
         {[
           { title: 'Total Balance', value: '₹24,56,000', change: '+4.3%', isPositive: true, icon: <DollarSign className="h-5 w-5 text-white" />, color: 'bg-primary' },
@@ -261,27 +226,23 @@ const Dashboard = () => {
           <Card className="w-full">
             <div className="flex justify-between items-center mb-6">
               <div>
-                <h3 className="text-lg font-medium">Spending Overview</h3>
-                <p className="text-sm text-gray-500 dark:text-gray-400">Your monthly expenses</p>
-              </div>
-              <div className="flex gap-2">
-                <Button variant="outline" size="sm" className="text-xs">Monthly</Button>
-                <Button variant="ghost" size="sm" className="text-xs">Yearly</Button>
+                <h3 className="text-lg font-medium">Spending by Category</h3>
+                <p className="text-sm text-gray-500 dark:text-gray-400">Your expenses by category</p>
               </div>
             </div>
             <div className="h-64">
-              <AreaChart width={700} height={250} data={spendingData} margin={{ top: 10, right: 30, left: 0, bottom: 0 }}>
-                <defs>
-                  <linearGradient id="colorUv" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="#0055FF" stopOpacity={0.8}/>
-                    <stop offset="95%" stopColor="#0055FF" stopOpacity={0}/>
-                  </linearGradient>
-                </defs>
-                <XAxis dataKey="name" />
-                <YAxis />
-                <Tooltip />
-                <Area type="monotone" dataKey="amount" stroke="#0055FF" fillOpacity={1} fill="url(#colorUv)" />
-              </AreaChart>
+              {spendingByCategory && !isSpendingLoading ? (
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart data={spendingByCategory}>
+                    <XAxis dataKey="category" />
+                    <YAxis />
+                    <Tooltip formatter={(value) => `₹${Number(value).toLocaleString()}`} />
+                    <Bar dataKey="totalAmount" fill="#0055FF" />
+                  </BarChart>
+                </ResponsiveContainer>
+              ) : (
+                <Loader2 className="h-5 w-5 animate-spin mx-auto" />
+              )}
             </div>
           </Card>
         </div>
@@ -295,13 +256,7 @@ const Dashboard = () => {
             <TransactionForm onSuccess={handleTransactionSuccess} />
             <div className="mt-6">
               <h3 className="text-lg font-medium mb-2">Recent Transactions</h3>
-              {txError && (
-                <p className="text-finance-negative">
-                  {(txError as Error).message.includes('429') 
-                    ? 'Transactions temporarily unavailable - too many requests'
-                    : (txError as Error).message}
-                </p>
-              )}
+              {txError && <p className="text-finance-negative">{txError.message}</p>}
               {isTxLoading && <Loader2 className="h-5 w-5 animate-spin mx-auto" />}
               {transactions && !isTxLoading && (
                 <ul className="space-y-2 max-h-40 overflow-y-auto">

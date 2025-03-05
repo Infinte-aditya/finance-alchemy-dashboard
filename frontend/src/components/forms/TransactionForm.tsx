@@ -1,27 +1,15 @@
-// frontend/src/components/forms/TransactionForm.tsx
 import React, { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { 
-  Form, 
-  FormControl, 
-  FormField, 
-  FormItem, 
-  FormLabel, 
-  FormMessage 
+  Form, FormControl, FormField, FormItem, FormLabel, FormMessage 
 } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Calendar } from '@/components/ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { 
-  Select, 
-  SelectContent, 
-  SelectItem, 
-  SelectTrigger, 
-  SelectValue 
-} from '@/components/ui/select';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { format } from 'date-fns';
 import { toast } from 'sonner';
 import { CalendarIcon, Loader2 } from 'lucide-react';
@@ -32,7 +20,7 @@ const formSchema = z.object({
   amount: z.coerce.number().positive({ message: 'Amount must be a positive number' }),
   date: z.date({ required_error: 'Please select a date' }),
   description: z.string().min(3, { message: 'Description must be at least 3 characters' }).max(200, { message: 'Description cannot exceed 200 characters' }),
-  category: z.string({ required_error: 'Please select a category' }),
+  category: z.string({ required_error: 'Please select a category' }).optional(), // Optional since backend can classify
 });
 
 type FormValues = z.infer<typeof formSchema>;
@@ -52,7 +40,7 @@ const TransactionForm: React.FC<TransactionFormProps> = ({ onSuccess }) => {
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
     defaultValues: {
-      amount: undefined,
+      amount: 0,
       date: new Date(),
       description: '',
       category: '',
@@ -63,9 +51,7 @@ const TransactionForm: React.FC<TransactionFormProps> = ({ onSuccess }) => {
     setIsSubmitting(true);
     try {
       const token = localStorage.getItem('finance_auth_token');
-      if (!token) {
-        throw new Error('No authentication token found');
-      }
+      if (!token) throw new Error('No authentication token found');
       const response = await fetch('http://localhost:3001/transactions', {
         method: 'POST',
         headers: { 
@@ -132,8 +118,7 @@ const TransactionForm: React.FC<TransactionFormProps> = ({ onSuccess }) => {
                     <FormControl>
                       <Button
                         variant="outline"
-                        className={cn("w-full pl-3 text-left font-normal", 
-                          !field.value && "text-muted-foreground")}
+                        className={cn("w-full pl-3 text-left font-normal", !field.value && "text-muted-foreground")}
                         disabled={isSubmitting}
                       >
                         {field.value ? format(field.value, "PPP") : <span>Pick a date</span>}
@@ -184,7 +169,7 @@ const TransactionForm: React.FC<TransactionFormProps> = ({ onSuccess }) => {
           name="category"
           render={({ field }) => (
             <FormItem>
-              <FormLabel>Category</FormLabel>
+              <FormLabel>Category (Optional)</FormLabel>
               <FormControl>
                 <Select 
                   onValueChange={field.onChange} 
@@ -192,7 +177,7 @@ const TransactionForm: React.FC<TransactionFormProps> = ({ onSuccess }) => {
                   disabled={isSubmitting}
                 >
                   <SelectTrigger className="text-gray-900 dark:text-gray-200 dark:bg-gray-700">
-                    <SelectValue placeholder="Select a category" />
+                    <SelectValue placeholder="Select a category or leave blank to auto-classify" />
                   </SelectTrigger>
                   <SelectContent>
                     {CATEGORIES.map((category) => (
